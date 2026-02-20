@@ -1,0 +1,48 @@
+# Automatically build the project and run any configured tests for every push
+# and submitted pull request. This can help catch issues that only occur on
+# certain platforms or Java versions, and provides a first line of defence
+# against bad commits.
+
+name: build
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    strategy:
+      matrix:
+        java: [21]
+        os: [ubuntu-22.04]
+
+    steps:
+      - name: Checkout AdvancedLootInfo
+        uses: actions/checkout@v6
+        with:
+          path: AdvancedLootInfo
+
+      - name: Setup jdk ${{ matrix.java }}
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java }}
+          cache: gradle
+
+      - name: Build AdvancedLootInfo
+        working-directory: AdvancedLootInfo
+        run: |
+          chmod +x gradlew
+          ./gradlew build --no-daemon
+
+      - name: Capture AdvancedLootInfo artifacts
+        if: runner.os == 'Linux' && matrix.java == '21'
+        uses: actions/upload-artifact@v6
+        with:
+          name: AdvancedLootInfo-artifacts
+          path: '**/build/libs/'
